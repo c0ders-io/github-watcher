@@ -172,3 +172,4 @@ dist
 .wrangler/
 
 wrangler.local.jsonc
+.env

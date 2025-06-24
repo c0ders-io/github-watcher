@@ -5,7 +5,9 @@ declare namespace Cloudflare {
 	interface Env {
 	}
 }
-interface Env extends Cloudflare.Env {}
+interface Env extends Cloudflare.Env {
+	GITHUB_CACHE: KVNamespace;
+}
 
 // Begin runtime types
 /*! *****************************************************************************

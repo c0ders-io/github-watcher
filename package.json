@@ -1,16 +1,21 @@
 {
 	"name": "github-watcher",
-  "description": "A Cloudflare Worker that watches GitHub repositories for updates and sends notifications.",
+	"description": "A Cloudflare Worker that watches GitHub repositories for updates and sends notifications.",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev --test-scheduled",
-		"start": "wrangler dev --test-scheduled",
+		"deploy": "wrangler deploy --config wrangler.toml",
+		"dev": "wrangler dev --test-scheduled --config wrangler.toml",
+		"start": "wrangler dev --test-scheduled --config wrangler.toml",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
-		"typescript": "^5.5.2",
+		"typescript": "^5.8.3",
 		"wrangler": "^4.21.0"
+	},
+	"dependencies": {
+		"discord-interactions": "^4.3.0",
+		"fast-xml-parser": "^5.2.5",
+		"itty-router": "^5.0.18"
 	}
 }

@@ -1,26 +1,21 @@
-/**
- * Welcome to Cloudflare Workers!
- *
- * This is a template for a Scheduled Worker: a Worker that can run on a
- * configurable interval:
- * https://developers.cloudflare.com/workers/platform/triggers/cron-triggers/
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Run `curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"` to see your Worker in action
- * - Run `npm run deploy` to publish your Worker
- *
- * Bind resources to your Worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { XMLParser } from 'fast-xml-parser';
 
 export default {
-	async fetch(req) {
-		const url = new URL(req.url);
-		url.pathname = '/__scheduled';
-		url.searchParams.append('cron', '* * * * *');
-		return new Response(`To test the scheduled handler, ensure you have used the "--test-scheduled" then try running "curl ${url.href}".`);
+	async fetch(req, env, ctx) {
+		const FEED_URL = "https://github.com/vercel/next.js/commits/canary.atom";
+		
+		const res = await fetch(FEED_URL);
+		const xml = await res.text();
+
+		const parser = new XMLParser({ ignoreAttributes: false });
+		const parsed = parser.parse(xml);
+
+		const entries = parsed.feed.entry;
+		const latest = Array.isArray(entries) ? entries[0] : entries;
+		const commitId = latest.id.split('/')?.pop(); 
+		await env.GITHUB_CACHE.put("latestCommit", commitId);
+		
+		return new Response(commitId, { status: 200 });
 	},
 
 	// The scheduled handler is invoked at the interval set in our wrangler.jsonc's
