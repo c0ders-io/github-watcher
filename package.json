@@ -1,5 +1,6 @@
 {
 	"name": "github-watcher",
+  "description": "A Cloudflare Worker that watches GitHub repositories for updates and sends notifications.",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
