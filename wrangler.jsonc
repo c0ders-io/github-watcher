@@ -8,7 +8,7 @@
 	},
 	"triggers": {
 		"crons": [
-			"* * * * *" // every minute
+			"*/5 * * * *"
 		]
 	},
 	"kv_namespaces": [
