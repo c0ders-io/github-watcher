@@ -2,14 +2,18 @@
 	"name": "github-watcher",
 	"description": "A Cloudflare Worker that watches GitHub repositories for updates and sends notifications.",
 	"version": "0.0.0",
+	"type": "module",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy --config wrangler.toml",
-		"dev": "wrangler dev --test-scheduled --config wrangler.toml",
-		"start": "wrangler dev --test-scheduled --config wrangler.toml",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev --test-scheduled",
+		"start": "wrangler dev --test-scheduled",
+		"register": "node src/register.js",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
+		"@types/node": "^24.0.4",
+		"dotenv": "^16.5.0",
 		"typescript": "^5.8.3",
 		"wrangler": "^4.21.0"
 	},
