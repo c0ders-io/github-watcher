@@ -1,5 +1,8 @@
 import ping from "./ping";
 import addRepo from "./add-repo";
+import listRepos from "./list-repos";
+import removeRepo from "./remove-repo";
+import updateEvents from "./update-events";
 import { APIApplicationCommand, APIChatInputApplicationCommandInteraction, ApplicationCommandOptionType } from "discord-api-types/v10"
 
 
@@ -13,5 +16,8 @@ export interface Command {
 
 export default [
     ping,
-    addRepo
+    addRepo,
+    listRepos,
+    removeRepo,
+    updateEvents
 ]

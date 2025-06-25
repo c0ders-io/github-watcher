@@ -1,5 +1,5 @@
 import { Command } from ".";
-
+import { EVENT_DESCRIPTIONS, GitHubEvent } from "./add-repo";
 
 const listCommand: Command = {
     data: {
@@ -19,10 +19,24 @@ const listCommand: Command = {
             }
 
             let content = "📋 **Watched Repositories:**\n\n";
-            repos.forEach((repo: { repo: any; channelId: any; addedBy: any; }, index: number) => {
+            repos.forEach((repo: {
+                repo: any;
+                channelId: any;
+                addedBy: any;
+                watchedEvents?: GitHubEvent[];
+                repoDescription?: string;
+            }, index: number) => {
                 content += `${index + 1}. **${repo.repo}**\n`;
-                content += `   └ Channel: <#${repo.channelId}>\n`;
-                content += `   └ Added by: ${repo.addedBy}\n\n`;
+                if (repo.repoDescription) {
+                    content += `   📝 ${repo.repoDescription}\n`;
+                }
+                content += `   📢 Channel: <#${repo.channelId}>\n`;
+                content += `   👤 Added by: ${repo.addedBy}\n`;
+
+                // Show watched events
+                const events = repo.watchedEvents || [GitHubEvent.COMMITS];
+                const eventDescriptions = events.map(event => EVENT_DESCRIPTIONS[event] || `\`${event}\``).join(', ');
+                content += `   🔔 Events: ${eventDescriptions}\n\n`;
             });
 
             return { content };
@@ -35,3 +49,5 @@ const listCommand: Command = {
         }
     }
 };
+
+export default listCommand;

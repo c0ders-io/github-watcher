@@ -1,10 +1,11 @@
-import { ApplicationCommandOptionType } from "discord-api-types/v10";
+import { ApplicationCommandOptionType, PermissionFlagsBits } from "discord-api-types/v10";
 import { Command } from ".";
 
 const removeCommand: Command = {
     data: {
         name: "remove-repo",
         description: "Remove a GitHub repository from watch list",
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
         options: [
             {
                 name: "repository",
@@ -31,22 +32,25 @@ const removeCommand: Command = {
             const existingRepos = await env.GITHUB_CACHE.get("watched_repos");
             let repos = existingRepos ? JSON.parse(existingRepos) : [];
 
-            // Find and remove repo
-            const initialLength = repos.length;
-            repos = repos.filter((r: { repo: string }) => r.repo !== repo);
+            // Find the repo to remove
+            const repoToRemove = repos.find((r: { repo: string }) => r.repo === repo);
 
-            if (repos.length === initialLength) {
+            if (!repoToRemove) {
                 return {
                     content: `Repository **${repo}** is not in the watch list!`,
                     flags: 64
                 };
             }
 
+            // Remove repo
+            repos = repos.filter((r: { repo: string }) => r.repo !== repo);
+
             // Save updated list
             await env.GITHUB_CACHE.put("watched_repos", JSON.stringify(repos));
 
             return {
-                content: `✅ Successfully removed **${repo}** from watch list!`
+                content: `✅ Successfully removed **${repo}** from watch list!\n` +
+                    `📢 Notifications were being sent to <#${repoToRemove.channelId}>`
             };
         } catch (error) {
             console.error("Error removing repo:", error);
@@ -57,3 +61,5 @@ const removeCommand: Command = {
         }
     }
 };
+
+export default removeCommand;
