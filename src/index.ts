@@ -172,9 +172,17 @@ async function sendDiscordMessage(channelId: string, content: string, env: Env) 
 }
 
 // Function to get latest commits from GitHub
-async function getLatestCommits(repo: string): Promise<GitHubCommit[]> {
+async function getLatestCommits(repo: string, env: Env): Promise<GitHubCommit[]> {
 	try {
-		const response = await fetch(`https://api.github.com/repos/${repo}/commits?per_page=5`);
+		const headers: Record<string, string> = {
+			'User-Agent': 'Discord-Bot-GitHub-Watcher',
+			'Accept': 'application/vnd.github.v3+json'
+		};
+
+		if (env.GITHUB_TOKEN) {
+			headers['Authorization'] = `Bearer ${env.GITHUB_TOKEN}`;
+		}
+		const response = await fetch(`https://api.github.com/repos/${repo}/commits?per_page=5`, { headers });
 		if (!response.ok) {
 			throw new Error(`GitHub API error: ${response.status}`);
 		}
@@ -225,7 +233,7 @@ export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionC
 			try {
 				console.log(`Checking ${watchedRepo.repo}...`);
 
-				const commits = await getLatestCommits(watchedRepo.repo);
+				const commits = await getLatestCommits(watchedRepo.repo, env);
 				if (commits.length === 0) {
 					continue;
 				}
