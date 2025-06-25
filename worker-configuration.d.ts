@@ -7,6 +7,7 @@ declare namespace Cloudflare {
         DISCORD_TOKEN: string;
         DISCORD_APPLICATION_ID: string;
         DISCORD_PUBLIC_KEY: string;
+        PASSWORD: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

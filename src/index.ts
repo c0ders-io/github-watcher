@@ -1,16 +1,21 @@
 import { XMLParser } from 'fast-xml-parser';
 import { AutoRouter, IRequest } from 'itty-router';
 import {
+	InteractionResponseFlags,
 	InteractionResponseType,
 	InteractionType,
 	verifyKey,
 } from 'discord-interactions';
+import commands from './commands';
+
 class JsonResponse extends Response {
-	constructor(body: any, init: ResponseInit = {}) {
+	constructor(body: Object, init: ResponseInit = {}) {
 		const jsonBody = JSON.stringify(body);
-		init = init || {
+		init = {
+			...init,
 			headers: {
 				'content-type': 'application/json;charset=UTF-8',
+				...init.headers
 			},
 		};
 		super(jsonBody, init);
@@ -18,9 +23,6 @@ class JsonResponse extends Response {
 }
 const router = AutoRouter();
 
-/**
- * A simple :wave: hello page to verify the worker is working.
- */
 router.get('/', (request, env) => {
 	return new Response(`👋 ${env.DISCORD_APPLICATION_ID}`);
 });
@@ -40,21 +42,57 @@ router.post('/', async (request, env) => {
 	}
 
 	if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-		switch (interaction.data.name.toLowerCase()) {
-			case 'ping': {
-				return new JsonResponse({
-					type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-					data: {
-						content: 'Pong!',
-					},
-				});
-			}
+		console.log('Handling Application Command request');
+
+		const command = commands.find((c) => c.data.name === interaction.data.name);
+
+		if (!command) {
+			return new JsonResponse({
+				type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+				data: {
+					content: 'Unknown command',
+					flags: InteractionResponseFlags.EPHEMERAL,
+				},
+			});
 		}
+
+		console.log('Handling command: ', interaction.data.name);
+
+		const data = await command.execute(interaction);
+
+		return new JsonResponse({
+			type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+			data
+		});
 	}
 
 	console.error('Unknown Type');
 	return new JsonResponse({ error: 'Unknown Type' }, { status: 400 });
 });
+
+router.get(`/register/*`, async (request: Request, env: Env) => {
+	let url = new URL(request.url)
+	let password = url.pathname.split("/")[2]
+	if (password !== env.PASSWORD) {
+		return new JsonResponse({ error: 'Invalid Password' }, { status: 400 });
+	}
+
+	const data = JSON.stringify(commands.map(c => c.data))
+
+	const res = await fetch(`https://discord.com/api/v10/applications/${env.DISCORD_APPLICATION_ID}/commands`, {
+		method: "PUT",
+		headers: {
+			"Authorization": `Bot ${env.DISCORD_TOKEN}`,
+			"Content-Type": "application/json"
+		},
+		body: data
+	})
+	return new JsonResponse({
+		data,
+		res: await res.json()
+	})
+})
+
 router.all('*', () => new Response('Not Found.', { status: 404 }));
 
 async function verifyDiscordRequest(request: IRequest, env: Env) {
@@ -71,8 +109,8 @@ async function verifyDiscordRequest(request: IRequest, env: Env) {
 
 	return { interaction: JSON.parse(body), isValid: true };
 }
-export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise < void> {
-	
+export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+
 	let resp = await fetch('https://api.cloudflare.com/client/v4/ips');
 	let wasSuccessful = resp.ok ? 'success' : 'fail';
 	/*const FEED_URL = "https:/ / github.com / vercel / next.js / commits / canary.atom";
