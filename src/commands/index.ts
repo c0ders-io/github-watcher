@@ -1,14 +1,13 @@
 import ping from "./ping";
-import { APIApplicationCommandOptionBase, APIUserApplicationCommandGuildInteraction, ApplicationCommandOptionType } from "discord-api-types/v10"
+import { APIApplicationCommand, APIChatInputApplicationCommandInteraction, ApplicationCommandOptionType } from "discord-api-types/v10"
 
 
-export interface data extends Omit<APIApplicationCommandOptionBase<ApplicationCommandOptionType>, 'type'> {
-    type?: ApplicationCommandOptionType
-}
+type PartialWithRequired<T, K extends keyof T> = Pick<T, K> & Partial<T>;
 
+export type PartialWithRequiredAPIApplicationCommand = PartialWithRequired<APIApplicationCommand, 'name'>;
 export interface Command {
-    data: data,
-    execute: (interaction: APIUserApplicationCommandGuildInteraction) => void
+    data: PartialWithRequiredAPIApplicationCommand,
+    execute: (interaction: APIChatInputApplicationCommandInteraction) => void
 }
 
 export default [

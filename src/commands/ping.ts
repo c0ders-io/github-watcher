@@ -8,7 +8,7 @@ const command: Command = {
 
     async execute(interaction) {
         return {
-            content: "Pong, " + interaction.member.user.username + "!"
+            content: "Pong, " + interaction.member!.user.username + "!"
         }
     }
 }

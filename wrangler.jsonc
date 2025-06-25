@@ -1,0 +1,20 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "github-watcher",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-06-20",
+	"observability": {
+		"enabled": true
+	},
+	"triggers": {
+		"crons": [
+			"*/5 * * * *"
+		]
+	},
+	"kv_namespaces": [
+		{
+			"binding": "GITHUB_CACHE",
+			"id": "8320c1455b214e0da75d4a14396cdec0"
+		}
+	]
+}

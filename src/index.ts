@@ -1,4 +1,4 @@
-import { XMLParser } from 'fast-xml-parser';
+
 import { AutoRouter, IRequest } from 'itty-router';
 import {
 	InteractionResponseFlags,
@@ -78,7 +78,21 @@ router.get(`/register/*`, async (request: Request, env: Env) => {
 	}
 
 	const data = JSON.stringify(commands.map(c => c.data))
-
+	const guild = env.GUILD_ID
+	if (guild) {
+		const res = await fetch(`https://discord.com/api/v10/applications/${env.DISCORD_APPLICATION_ID}/guilds/${guild}/commands`, {
+			method: "PUT",
+			headers: {
+				"Authorization": `Bot ${env.DISCORD_TOKEN}`,
+				"Content-Type": "application/json"
+			},
+			body: data
+		})
+		return new JsonResponse({
+			data,
+			res: await res.json()
+		})
+	}
 	const res = await fetch(`https://discord.com/api/v10/applications/${env.DISCORD_APPLICATION_ID}/commands`, {
 		method: "PUT",
 		headers: {
