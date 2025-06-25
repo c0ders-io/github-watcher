@@ -22,7 +22,6 @@ export const EVENT_DESCRIPTIONS = {
     [GitHubEvent.ISSUES_CLOSED]: "✔️ Issues closed",
     [GitHubEvent.RELEASES]: "🚀 New releases",
     [GitHubEvent.PUSH]: "⬆️ Code pushed",
-    ["all"]: "All events"
 };
 
 const command: Command = {
@@ -45,7 +44,7 @@ const command: Command = {
             },
             {
                 name: "events",
-                description: "Events to watch (comma-separated: commits,pr_opened,pr_closed,pr_merged,issues_opened,issues_closed,releases,push,all)",
+                description: "Events to watch (comma-separated: commits,pr_opened,pr_closed,pr_merged)",
                 type: ApplicationCommandOptionType.String,
                 required: false,
                 
