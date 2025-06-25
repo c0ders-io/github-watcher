@@ -16,7 +16,7 @@ const updateEventsCommand: Command = {
             },
             {
                 name: "events",
-                description: "Events to watch (comma-separated: commits,pr_opened,pr_closed,pr_merged,issues_opened,issues_closed,releases,push)",
+                description: "Events to watch (comma-separated: commits,pr_opened,pr_closed,pr_merged,issues_opened)",
                 type: ApplicationCommandOptionType.String,
                 required: true
             }
