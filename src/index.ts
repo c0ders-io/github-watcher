@@ -1,4 +1,4 @@
-
+import { XMLParser } from 'fast-xml-parser';
 import { AutoRouter, IRequest } from 'itty-router';
 import {
 	InteractionResponseFlags,
@@ -7,6 +7,31 @@ import {
 	verifyKey,
 } from 'discord-interactions';
 import commands from './commands';
+
+// GitHub commit interface
+interface GitHubCommit {
+	sha: string;
+	commit: {
+		message: string;
+		author: {
+			name: string;
+			date: string;
+		};
+	};
+	html_url: string;
+	author?: {
+		login?: string;
+		avatar_url?: string;
+	};
+}
+
+interface WatchedRepo {
+	repo: string;
+	channelId: string;
+	lastCommitId: string | null;
+	addedBy: string;
+	addedAt: string;
+}
 
 class JsonResponse extends Response {
 	constructor(body: Object, init: ResponseInit = {}) {
@@ -21,12 +46,14 @@ class JsonResponse extends Response {
 		super(jsonBody, init);
 	}
 }
+
 const router = AutoRouter();
 
-router.get('/', (request, env) => {
-	return new Response(`👋 ${env.DISCORD_APPLICATION_ID}`);
+router.get('/', (request, env: Env) => {
+	return new Response(`👋 GitHub Watcher Bot - ${env.DISCORD_APPLICATION_ID}`);
 });
-router.post('/', async (request, env) => {
+
+router.post('/', async (request, env: Env) => {
 	const { isValid, interaction } = await server.verifyDiscordRequest(
 		request,
 		env,
@@ -58,7 +85,7 @@ router.post('/', async (request, env) => {
 
 		console.log('Handling command: ', interaction.data.name);
 
-		const data = await command.execute(interaction);
+		const data = await command.execute(interaction, env);
 
 		return new JsonResponse({
 			type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -123,27 +150,128 @@ async function verifyDiscordRequest(request: IRequest, env: Env) {
 
 	return { interaction: JSON.parse(body), isValid: true };
 }
+
+// Function to send Discord message
+async function sendDiscordMessage(channelId: string, content: string, env: Env) {
+	try {
+		const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bot ${env.DISCORD_TOKEN}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ content }),
+		});
+
+		if (!response.ok) {
+			console.error(`Failed to send message to channel ${channelId}:`, await response.text());
+		}
+	} catch (error) {
+		console.error(`Error sending message to channel ${channelId}:`, error);
+	}
+}
+
+// Function to get latest commits from GitHub
+async function getLatestCommits(repo: string): Promise<GitHubCommit[]> {
+	try {
+		const response = await fetch(`https://api.github.com/repos/${repo}/commits?per_page=5`);
+		if (!response.ok) {
+			throw new Error(`GitHub API error: ${response.status}`);
+		}
+		return await response.json();
+	} catch (error) {
+		console.error(`Error fetching commits for ${repo}:`, error);
+		return [];
+	}
+}
+
+// Function to create commit embed message
+function createCommitMessage(commit: GitHubCommit, repo: string): string {
+	const author = commit.author?.login || commit.commit.author.name;
+	const message = commit.commit.message.split('\n')[0]; // First line only
+	const shortSha = commit.sha.substring(0, 7);
+	const date = new Date(commit.commit.author.date).toLocaleString();
+
+	return `🔄 **New commit in ${repo}**\n` +
+		`**Author:** ${author}\n` +
+		`**Message:** ${message}\n` +
+		`**SHA:** \`${shortSha}\`\n` +
+		`**Date:** ${date}\n` +
+		`**Link:** ${commit.html_url}`;
+}
+
+// Scheduled function to check for new commits
 export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+	console.log(`GitHub watcher triggered at ${event.cron}`);
 
-	let resp = await fetch('https://api.cloudflare.com/client/v4/ips');
-	let wasSuccessful = resp.ok ? 'success' : 'fail';
-	/*const FEED_URL = "https:/ / github.com / vercel / next.js / commits / canary.atom";
+	try {
+		// Get watched repositories
+		const reposData = await env.GITHUB_CACHE.get("watched_repos");
+		if (!reposData) {
+			console.log("No repositories to watch");
+			return;
+		}
 
-	const res = await fetch(FEED_URL);
-	const xml = await res.text();
+		const repos: WatchedRepo[] = JSON.parse(reposData);
+		if (repos.length === 0) {
+			console.log("No repositories in watch list");
+			return;
+		}
 
-	const parser = new XMLParser({ ignoreAttributes: false });
-	const parsed = parser.parse(xml);
+		console.log(`Checking ${repos.length} repositories for updates`);
 
-	const entries = parsed.feed.entry;
-	const latest = Array.isArray(entries) ? entries[0] : entries;
-	const commitId = latest.id.split('/')?.pop();
-	await env.GITHUB_CACHE.put("latestCommit", commitId);
-	console.log(env.DISCORD_PUBLIC_KEY)
-	return new Response(commitId, { status: 200 });*/
-	// You could store this result in KV, write to a D1 Database, or publish to a Queue.
-	// In this template, we'll just log the result:
-	console.log(`trigger fired at ${event.cron}: ${wasSuccessful}`);
+		// Check each repository for new commits
+		for (const watchedRepo of repos) {
+			try {
+				console.log(`Checking ${watchedRepo.repo}...`);
+
+				const commits = await getLatestCommits(watchedRepo.repo);
+				if (commits.length === 0) {
+					continue;
+				}
+
+				const latestCommit = commits[0];
+
+				// If this is the first time checking or there's a new commit
+				if (!watchedRepo.lastCommitId || watchedRepo.lastCommitId !== latestCommit.sha) {
+					// If we have a previous commit ID and it's different, we have new commits
+					if (watchedRepo.lastCommitId && watchedRepo.lastCommitId !== latestCommit.sha) {
+						// Find new commits (commits that came after the last known commit)
+						const newCommits = [];
+						for (const commit of commits) {
+							if (commit.sha === watchedRepo.lastCommitId) {
+								break; // Stop when we reach the last known commit
+							}
+							newCommits.push(commit);
+						}
+
+						// Send notification for each new commit
+						for (const commit of newCommits.reverse()) { // Reverse to show oldest first
+							const message = createCommitMessage(commit, watchedRepo.repo);
+							await sendDiscordMessage(watchedRepo.channelId, message, env);
+
+							// Add a small delay between messages to avoid rate limiting
+							await new Promise(resolve => setTimeout(resolve, 1000));
+						}
+
+						console.log(`Sent ${newCommits.length} commit notifications for ${watchedRepo.repo}`);
+					}
+
+					// Update the last commit ID
+					watchedRepo.lastCommitId = latestCommit.sha;
+				}
+			} catch (error) {
+				console.error(`Error checking repository ${watchedRepo.repo}:`, error);
+			}
+		}
+
+		// Save updated repository data
+		await env.GITHUB_CACHE.put("watched_repos", JSON.stringify(repos));
+
+		console.log("GitHub watcher completed successfully");
+	} catch (error) {
+		console.error("Error in scheduled GitHub watcher:", error);
+	}
 }
 
 const server = {
