@@ -15,7 +15,7 @@
 		"discord-api-types": "^0.38.13",
 		"dotenv": "^16.5.0",
 		"typescript": "^5.8.3",
-		"wrangler": "^4.21.0"
+		"wrangler": "^4.21.2"
 	},
 	"dependencies": {
 		"discord-interactions": "^4.3.0",
